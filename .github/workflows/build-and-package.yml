@@ -38,6 +38,9 @@ jobs:
       if: matrix.arch == 'armhf'
       run: |
         sudo dpkg --add-architecture armhf
+        # Add ARM ports repository for armhf packages
+        echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports $(lsb_release -cs) main universe" | sudo tee /etc/apt/sources.list.d/armhf.list
+        echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports $(lsb_release -cs)-updates main universe" | sudo tee -a /etc/apt/sources.list.d/armhf.list
         sudo apt-get update
         sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf libncurses-dev:armhf
 
