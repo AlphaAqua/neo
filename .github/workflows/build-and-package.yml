@@ -33,6 +33,13 @@ jobs:
         chmod +x tests/system_test.sh
         ./tests/system_test.sh
 
+    - name: Publish test results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: test-results/junit.xml
+        check_name: Neo System Test Results
+
     - name: Create Debian package structure
       run: |
         mkdir -p debian-package/neo/DEBIAN
