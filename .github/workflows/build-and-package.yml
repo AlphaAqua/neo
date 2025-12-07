@@ -11,19 +11,17 @@ on:
 
 jobs:
   build-deb:
-    runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: [amd64, armhf]
         include:
           - arch: amd64
+            runner: ubuntu-latest
             deb_arch: amd64
-            cc: gcc
-            cxx: g++
           - arch: armhf
+            runner: ubuntu-24.04-arm
             deb_arch: armhf
-            cc: arm-linux-gnueabihf-gcc
-            cxx: arm-linux-gnueabihf-g++
+
+    runs-on: ${{ matrix.runner }}
 
     steps:
     - name: Checkout code
@@ -34,45 +32,34 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y build-essential libncurses-dev autoconf tmux
 
-    - name: Install cross-compilation tools for armhf
+    - name: Install 32-bit build tools for armhf
       if: matrix.arch == 'armhf'
       run: |
         sudo dpkg --add-architecture armhf
-        # Backup and modify sources to restrict to amd64 (only Ubuntu repos)
-        sudo cp /etc/apt/sources.list /etc/apt/sources.list.backup
-        sudo sed -i 's|^deb \(http://.*ubuntu\)|deb [arch=amd64] \1|g' /etc/apt/sources.list
-        sudo sed -i 's|^deb \(https://.*ubuntu\)|deb [arch=amd64] \1|g' /etc/apt/sources.list
-        # Only modify Ubuntu-related list files in sources.list.d
-        sudo find /etc/apt/sources.list.d -name "ubuntu*.list" -exec sed -i 's|^deb \(http\)|deb [arch=amd64] \1|g' {} \;
-        sudo find /etc/apt/sources.list.d -name "ubuntu*.list" -exec sed -i 's|^deb \(https\)|deb [arch=amd64] \1|g' {} \;
-        # Add ARM ports repository for armhf packages
-        sudo tee /etc/apt/sources.list.d/armhf.list >/dev/null <<EOF
-        deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports $(lsb_release -cs) main universe restricted multiverse
-        deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports $(lsb_release -cs)-updates main universe restricted multiverse
-        deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports $(lsb_release -cs)-security main universe restricted multiverse
-        deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports $(lsb_release -cs)-backports main universe restricted multiverse
-        EOF
         sudo apt-get update
-        sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf libncurses-dev:armhf
+        sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf libncurses-dev:armhf libc6-dev:armhf
 
     - name: Build neo
       run: |
         ./autogen.sh
-        ./configure --prefix=/usr --host=${{ matrix.arch == 'armhf' && 'arm-linux-gnueabihf' || 'x86_64-linux-gnu' }} CC=${{ matrix.cc }} CXX=${{ matrix.cxx }}
+        if [ "${{ matrix.arch }}" = "armhf" ]; then
+          ./configure --prefix=/usr --host=arm-linux-gnueabihf CC=arm-linux-gnueabihf-gcc CXX=arm-linux-gnueabihf-g++
+        else
+          ./configure --prefix=/usr
+        fi
         make -j$(nproc)
 
     - name: Run system tests
-      if: matrix.arch == 'amd64'
       run: |
         chmod +x tests/system_test.sh
         ./tests/system_test.sh
 
     - name: Publish test results
       uses: EnricoMi/publish-unit-test-result-action@v2
-      if: always() && matrix.arch == 'amd64'
+      if: always()
       with:
         files: test-results/junit.xml
-        check_name: Neo System Test Results
+        check_name: Neo System Test Results (${{ matrix.arch }})
 
     - name: Create Debian package structure
       run: |
