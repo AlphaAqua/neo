@@ -83,15 +83,15 @@ jobs:
         Conflicts=getty@tty1.service
 
         [Service]
-        Type=idle
-        ExecStart=/usr/bin/openvt -f -c 1 -s -- /usr/bin/neo --charset=ascii
+        Type=simple
+        ExecStart=/usr/bin/openvt -f -c 1 -s -w -- /usr/bin/neo --charset=ascii
         StandardInput=tty
         StandardOutput=tty
         TTYPath=/dev/tty1
         TTYReset=yes
         TTYVHangup=yes
-        Restart=always
-        RestartSec=2
+        Restart=on-failure
+        RestartSec=5
 
         [Install]
         WantedBy=multi-user.target
