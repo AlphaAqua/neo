@@ -6,7 +6,7 @@ on:
     tags:
       - 'v*'
   pull_request:
-    branches: [ main ]
+    branches: [ alpha ]
   workflow_dispatch:
 
 jobs:
@@ -139,7 +139,7 @@ jobs:
         Priority: optional
         Architecture: ${{ matrix.deb_arch }}
         Depends: libncurses6, libc6
-        Maintainer: AlphaAqua <your-email@example.com>
+        Maintainer: https://github.com/st3w/neo
         Description: Recreates the digital rain effect from "The Matrix"
          neo recreates the digital rain effect from "The Matrix".
          Streams of random characters will endlessly scroll down your terminal screen.
