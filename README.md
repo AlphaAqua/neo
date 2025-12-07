@@ -240,6 +240,30 @@ To run tests locally:
 
 Requirements: tmux must be installed for system tests.
 
+## Creating a Release
+
+To create a new release with pre-built packages:
+
+1. **Ensure your changes are merged to the main branch**
+   ```Shell
+   git checkout main
+   git pull
+   ```
+
+2. **Create and push a version tag** (e.g., v1.0.0)
+   ```Shell
+   git tag v1.0.0
+   git push origin v1.0.0
+   ```
+
+3. **GitHub Actions will automatically:**
+   - Build packages for both amd64 and armhf architectures
+   - Run all system tests
+   - Create a GitHub Release
+   - Upload both .deb packages to the release
+
+The release will be available at: https://github.com/AlphaAqua/neo/releases
+
 ## Bugs
 
 File a GitHub issue. Crashes and build failures will be prioritized. Minor bugs, documentation errors, etc should hopefully get triaged and fixed... eventually.
