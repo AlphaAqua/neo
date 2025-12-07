@@ -54,8 +54,8 @@ jobs:
         deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports ${CODENAME}-security main universe restricted multiverse
         deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports ${CODENAME}-backports main universe restricted multiverse
         EOF
-        # Remove any ubuntu*.list files in sources.list.d that might interfere
-        sudo rm -f /etc/apt/sources.list.d/ubuntu*.list
+        # Remove ALL list files in sources.list.d to avoid conflicts
+        sudo rm -f /etc/apt/sources.list.d/*.list
         sudo apt-get update
         sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf libncurses-dev:armhf
 
