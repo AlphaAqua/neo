@@ -41,19 +41,64 @@ A fast terminal emulator such as Alacritty is highly recommended. **neo** can be
 
 ## Automated Builds
 
-Pre-built `.deb` packages are available for Debian/Ubuntu systems. Download the latest release from the [Releases](https://github.com/AlphaAqua/neo/releases) page.
+Pre-built `.deb` packages are available for Debian/Ubuntu systems.
 
 The `.deb` package includes:
 - The neo binary installed to `/usr/bin/neo`
 - Man page accessible via `man neo`
 - Systemd service that can be enabled to start at boot
 
-To install:
+### Download from GitHub Releases (Recommended)
+
+Download the latest stable release:
+
+```Shell
+# Download the latest release
+wget https://github.com/AlphaAqua/neo/releases/latest/download/neo_<VERSION>_amd64.deb
+
+# Or download a specific version (e.g., 1.0.0)
+wget https://github.com/AlphaAqua/neo/releases/download/v1.0.0/neo_1.0.0_amd64.deb
+```
+
+You can also browse all releases at: https://github.com/AlphaAqua/neo/releases
+
+### Download from GitHub Actions Artifacts
+
+**Note:** Artifacts require GitHub authentication and cannot be downloaded with `curl`/`wget`.
+
+To download the latest build artifact from any branch:
+
+**Option 1: Via GitHub Web UI**
+1. Go to the [Actions](https://github.com/AlphaAqua/neo/actions) tab
+2. Click on the latest successful workflow run
+3. Scroll down to the "Artifacts" section
+4. Click to download `neo-deb-package`
+
+**Option 2: Using GitHub CLI (requires authentication)**
+```Shell
+# Install GitHub CLI if not already installed: https://cli.github.com/
+sudo apt install gh
+gh auth login
+
+# List recent workflow runs to get the run ID
+gh run list --repo AlphaAqua/neo --limit 5
+
+# Download artifact by run ID (replace RUN_ID with actual ID from list above)
+gh run download RUN_ID --repo AlphaAqua/neo --name neo-deb-package
+
+# Or download from the latest successful run
+gh run download --repo AlphaAqua/neo $(gh run list --repo AlphaAqua/neo --workflow "Build and Package" --status success --limit 1 --json databaseId --jq '.[0].databaseId') --name neo-deb-package
+```
+
+### Installation
+
+Once downloaded:
 ```Shell
 sudo dpkg -i neo_<VERSION>_amd64.deb
 ```
 
-To uninstall:
+### Uninstallation
+
 ```Shell
 sudo apt remove neo
 ```
