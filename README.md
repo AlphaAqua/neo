@@ -39,6 +39,25 @@ If you want to see Unicode characters, you must use a font that supports the cha
 
 A fast terminal emulator such as Alacritty is highly recommended. **neo** can be a bit of a CPU hog, especially on large screens with slow terminal emulators.
 
+## Automated Builds
+
+Pre-built `.deb` packages are available for Debian/Ubuntu systems. Download the latest release from the [Releases](https://github.com/AlphaAqua/neo/releases) page.
+
+The `.deb` package includes:
+- The neo binary installed to `/usr/bin/neo`
+- Man page accessible via `man neo`
+- Systemd service that can be enabled to start at boot
+
+To install:
+```Shell
+sudo dpkg -i neo_<VERSION>_amd64.deb
+```
+
+To uninstall:
+```Shell
+sudo apt remove neo
+```
+
 ## Building and Installing
 
 **Make sure you have read the Prerequisites section and satisified all the requirements.** See [doc/INSTALL](doc/INSTALL) for more details.
@@ -149,6 +168,17 @@ man neo
 **Q:** **neo** just shows simple ASCII characters. How can I make it show Unicode characters?
 
 **A:** **neo** detects if your locale supports Unicode. Typically, your $LANG environment variable should have "UTF" somewhere if it does (e.g. "en_US.UTF-8"). You can use commands such as localectl to change these settings. You can force **neo** to attempt to use Unicode by setting a custom charset (e.g. --charset=extended), but this still may not work due to other OS and terminal settings.
+
+## Testing
+
+**neo** includes automated system tests that verify the digital rain effect renders correctly to the terminal. Tests run automatically in CI/CD on every push.
+
+To run tests locally:
+```Shell
+./tests/system_test.sh
+```
+
+Requirements: tmux must be installed for system tests.
 
 ## Bugs
 

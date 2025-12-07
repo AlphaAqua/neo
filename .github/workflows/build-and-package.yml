@@ -20,13 +20,18 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential libncurses-dev autoconf
+        sudo apt-get install -y build-essential libncurses-dev autoconf tmux
 
     - name: Build neo
       run: |
         ./autogen.sh
         ./configure --prefix=/usr
         make -j$(nproc)
+
+    - name: Run system tests
+      run: |
+        chmod +x tests/system_test.sh
+        ./tests/system_test.sh
 
     - name: Create Debian package structure
       run: |
