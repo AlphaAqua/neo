@@ -41,7 +41,9 @@ A fast terminal emulator such as Alacritty is highly recommended. **neo** can be
 
 ## Automated Builds
 
-Pre-built `.deb` packages are available for Debian/Ubuntu systems.
+Pre-built `.deb` packages are available for Debian/Ubuntu systems in multiple architectures:
+- **amd64** - 64-bit x86 systems (standard PCs, servers)
+- **armhf** - 32-bit ARM systems (Raspberry Pi, embedded devices)
 
 The `.deb` package includes:
 - The neo binary installed to `/usr/bin/neo`
@@ -50,14 +52,18 @@ The `.deb` package includes:
 
 ### Download from GitHub Releases (Recommended)
 
-Download the latest stable release:
+Download the latest stable release for your architecture:
 
 ```Shell
-# Download the latest release
+# For amd64 (64-bit x86 - standard PCs)
 wget https://github.com/AlphaAqua/neo/releases/latest/download/neo_<VERSION>_amd64.deb
+
+# For armhf (32-bit ARM - Raspberry Pi, etc.)
+wget https://github.com/AlphaAqua/neo/releases/latest/download/neo_<VERSION>_armhf.deb
 
 # Or download a specific version (e.g., 1.0.0)
 wget https://github.com/AlphaAqua/neo/releases/download/v1.0.0/neo_1.0.0_amd64.deb
+wget https://github.com/AlphaAqua/neo/releases/download/v1.0.0/neo_1.0.0_armhf.deb
 ```
 
 You can also browse all releases at: https://github.com/AlphaAqua/neo/releases
@@ -72,7 +78,9 @@ To download the latest build artifact from any branch:
 1. Go to the [Actions](https://github.com/AlphaAqua/neo/actions) tab
 2. Click on the latest successful workflow run
 3. Scroll down to the "Artifacts" section
-4. Click to download `neo-deb-package`
+4. Download the artifact for your architecture:
+   - `neo-deb-package-amd64` for 64-bit x86 systems
+   - `neo-deb-package-armhf` for 32-bit ARM systems
 
 **Option 2: Using GitHub CLI (requires authentication)**
 ```Shell
@@ -84,17 +92,24 @@ gh auth login
 gh run list --repo AlphaAqua/neo --limit 5
 
 # Download artifact by run ID (replace RUN_ID with actual ID from list above)
-gh run download RUN_ID --repo AlphaAqua/neo --name neo-deb-package
+# For amd64:
+gh run download RUN_ID --repo AlphaAqua/neo --name neo-deb-package-amd64
+# For armhf:
+gh run download RUN_ID --repo AlphaAqua/neo --name neo-deb-package-armhf
 
-# Or download from the latest successful run
-gh run download --repo AlphaAqua/neo $(gh run list --repo AlphaAqua/neo --workflow "Build and Package" --status success --limit 1 --json databaseId --jq '.[0].databaseId') --name neo-deb-package
+# Or download from the latest successful run (amd64):
+gh run download --repo AlphaAqua/neo $(gh run list --repo AlphaAqua/neo --workflow "Build and Package" --status success --limit 1 --json databaseId --jq '.[0].databaseId') --name neo-deb-package-amd64
 ```
 
 ### Installation
 
-Once downloaded:
+Once downloaded, install the package for your architecture:
 ```Shell
+# For amd64:
 sudo dpkg -i neo_<VERSION>_amd64.deb
+
+# For armhf:
+sudo dpkg -i neo_<VERSION>_armhf.deb
 ```
 
 ### Uninstallation

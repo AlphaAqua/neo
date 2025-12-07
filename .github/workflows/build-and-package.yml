@@ -12,6 +12,18 @@ on:
 jobs:
   build-deb:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, armhf]
+        include:
+          - arch: amd64
+            deb_arch: amd64
+            cc: gcc
+            cxx: g++
+          - arch: armhf
+            deb_arch: armhf
+            cc: arm-linux-gnueabihf-gcc
+            cxx: arm-linux-gnueabihf-g++
 
     steps:
     - name: Checkout code
@@ -22,20 +34,28 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y build-essential libncurses-dev autoconf tmux
 
+    - name: Install cross-compilation tools for armhf
+      if: matrix.arch == 'armhf'
+      run: |
+        sudo dpkg --add-architecture armhf
+        sudo apt-get update
+        sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf libncurses-dev:armhf
+
     - name: Build neo
       run: |
         ./autogen.sh
-        ./configure --prefix=/usr
+        ./configure --prefix=/usr --host=${{ matrix.arch == 'armhf' && 'arm-linux-gnueabihf' || 'x86_64-linux-gnu' }} CC=${{ matrix.cc }} CXX=${{ matrix.cxx }}
         make -j$(nproc)
 
     - name: Run system tests
+      if: matrix.arch == 'amd64'
       run: |
         chmod +x tests/system_test.sh
         ./tests/system_test.sh
 
     - name: Publish test results
       uses: EnricoMi/publish-unit-test-result-action@v2
-      if: always()
+      if: always() && matrix.arch == 'amd64'
       with:
         files: test-results/junit.xml
         check_name: Neo System Test Results
@@ -116,7 +136,7 @@ jobs:
         Version: ${{ steps.get_version.outputs.VERSION }}
         Section: misc
         Priority: optional
-        Architecture: amd64
+        Architecture: ${{ matrix.deb_arch }}
         Depends: libncurses6, libc6
         Maintainer: AlphaAqua <your-email@example.com>
         Description: Recreates the digital rain effect from "The Matrix"
@@ -134,21 +154,21 @@ jobs:
     - name: Build .deb package
       run: |
         dpkg-deb --build debian-package/neo
-        mkdir dist
-        mv debian-package/neo.deb ./dist/neo_${{ steps.get_version.outputs.VERSION }}_amd64.deb
+        mkdir -p dist
+        mv debian-package/neo.deb ./dist/neo_${{ steps.get_version.outputs.VERSION }}_${{ matrix.deb_arch }}.deb
 
     - name: Upload .deb package as artifact
       uses: actions/upload-artifact@v4
       with:
-        name: neo-deb-package
-        path: dist/neo_${{ steps.get_version.outputs.VERSION }}_amd64.deb
+        name: neo-deb-package-${{ matrix.arch }}
+        path: dist/neo_${{ steps.get_version.outputs.VERSION }}_${{ matrix.deb_arch }}.deb
         retention-days: 90
 
     - name: Create GitHub Release
       if: startsWith(github.ref, 'refs/tags/') && github.ref == 'refs/heads/main'
       uses: softprops/action-gh-release@v1
       with:
-        files: dist/neo_${{ steps.get_version.outputs.VERSION }}_amd64.deb
+        files: dist/neo_${{ steps.get_version.outputs.VERSION }}_${{ matrix.deb_arch }}.deb
         body: |
           ## Neo v${{ steps.get_version.outputs.VERSION }}
 
