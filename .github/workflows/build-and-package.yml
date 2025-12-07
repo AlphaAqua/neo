@@ -38,9 +38,11 @@ jobs:
       if: matrix.arch == 'armhf'
       run: |
         sudo dpkg --add-architecture armhf
-        # Restrict default repos to amd64 only to avoid 404 errors for armhf
-        sudo sed -i 's/^deb http/deb [arch=amd64] http/g' /etc/apt/sources.list
-        sudo sed -i 's/^deb mirror/deb [arch=amd64] mirror/g' /etc/apt/sources.list
+        # Backup and modify sources to restrict to amd64
+        sudo cp /etc/apt/sources.list /etc/apt/sources.list.backup
+        sudo sed -i 's/^deb /deb [arch=amd64] /g' /etc/apt/sources.list
+        # Also modify any .list files in sources.list.d
+        sudo find /etc/apt/sources.list.d -name "*.list" -exec sed -i 's/^deb /deb [arch=amd64] /g' {} \;
         # Add ARM ports repository for armhf packages
         sudo tee /etc/apt/sources.list.d/armhf.list >/dev/null <<EOF
         deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports $(lsb_release -cs) main universe restricted multiverse
@@ -175,7 +177,7 @@ jobs:
         retention-days: 90
 
     - name: Create GitHub Release
-      if: startsWith(github.ref, 'refs/tags/') && github.ref == 'refs/heads/main'
+      if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v1
       with:
         files: dist/neo_${{ steps.get_version.outputs.VERSION }}_${{ matrix.deb_arch }}.deb
