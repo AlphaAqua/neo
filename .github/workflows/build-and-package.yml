@@ -66,7 +66,7 @@ jobs:
         mkdir -p debian-package/neo/DEBIAN
         mkdir -p debian-package/neo/usr/bin
         mkdir -p debian-package/neo/usr/share/man/man6
-        mkdir -p debian-package/neo/etc/init.d
+        mkdir -p debian-package/neo/etc/systemd/system/getty@tty1.service.d
 
     - name: Install files to package directory
       run: |
@@ -74,43 +74,25 @@ jobs:
         cp doc/neo.6 debian-package/neo/usr/share/man/man6/
         gzip debian-package/neo/usr/share/man/man6/neo.6
 
-    - name: Create init.d script
+    - name: Create getty override configuration
       run: |
-        cat > debian-package/neo/etc/init.d/neo << 'EOF'
-        #!/bin/bash
-        ### BEGIN INIT INFO
-        # Provides:          neo
-        # Required-Start:    $local_fs $remote_fs
-        # Required-Stop:     $local_fs $remote_fs
-        # Default-Start:     2 3 4 5
-        # Default-Stop:      0 1 6
-        # Short-Description: Neo Matrix Digital Rain on Console
-        # Description:       Displays Matrix digital rain effect on tty1
-        ### END INIT INFO
-
-        case "$1" in
-          start)
-            # Run neo on tty1 in background, redirecting to the console
-            openvt -c 1 -f -s -- /usr/bin/neo &
-            ;;
-          stop)
-            # Kill neo processes
-            pkill -f "^/usr/bin/neo" || true
-            ;;
-          restart)
-            $0 stop
-            sleep 1
-            $0 start
-            ;;
-          *)
-            echo "Usage: $0 {start|stop|restart}"
-            exit 1
-            ;;
-        esac
-
-        exit 0
+        cat > debian-package/neo/etc/systemd/system/getty@tty1.service.d/override.conf << 'EOF'
+        [Service]
+        ExecStart=
+        ExecStart=-/sbin/agetty --autologin neo-user --noclear %I $TERM
         EOF
-        chmod 755 debian-package/neo/etc/init.d/neo
+
+    - name: Create neo wrapper script
+      run: |
+        cat > debian-package/neo/usr/bin/neo-session << 'EOF'
+        #!/bin/bash
+        # Run neo in a loop - if it exits, restart it
+        while true; do
+            /usr/bin/neo
+            sleep 1
+        done
+        EOF
+        chmod 755 debian-package/neo/usr/bin/neo-session
 
     - name: Create postinst script
       run: |
@@ -118,9 +100,18 @@ jobs:
         #!/bin/bash
         set -e
 
-        # Enable the init.d script to start at boot
-        if [ -x /usr/sbin/update-rc.d ]; then
-            update-rc.d neo defaults || true
+        # Create neo-user if it doesn't exist
+        if ! id -u neo-user >/dev/null 2>&1; then
+            useradd -m -s /usr/bin/neo-session neo-user
+        else
+            # Update shell for existing user
+            usermod -s /usr/bin/neo-session neo-user
+        fi
+
+        # Reload systemd to pick up the getty override
+        if [ -x /bin/systemctl ]; then
+            systemctl daemon-reload
+            systemctl restart getty@tty1.service || true
         fi
 
         exit 0
@@ -133,17 +124,40 @@ jobs:
         #!/bin/bash
         set -e
 
-        # Stop neo and disable the init.d script
-        if [ -x /etc/init.d/neo ]; then
-            /etc/init.d/neo stop || true
-        fi
-        if [ -x /usr/sbin/update-rc.d ]; then
-            update-rc.d -f neo remove || true
-        fi
+        # Kill any running neo processes
+        pkill -u neo-user || true
 
         exit 0
         EOF
         chmod 755 debian-package/neo/DEBIAN/prerm
+
+    - name: Create postrm script
+      run: |
+        cat > debian-package/neo/DEBIAN/postrm << 'EOF'
+        #!/bin/bash
+        set -e
+
+        if [ "$1" = "purge" ]; then
+            # Remove neo-user
+            if id -u neo-user >/dev/null 2>&1; then
+                userdel -r neo-user || true
+            fi
+
+            # Remove getty override directory if empty
+            if [ -d /etc/systemd/system/getty@tty1.service.d ]; then
+                rmdir --ignore-fail-on-non-empty /etc/systemd/system/getty@tty1.service.d || true
+            fi
+
+            # Reload systemd and restart getty
+            if [ -x /bin/systemctl ]; then
+                systemctl daemon-reload
+                systemctl restart getty@tty1.service || true
+            fi
+        fi
+
+        exit 0
+        EOF
+        chmod 755 debian-package/neo/DEBIAN/postrm
 
     - name: Get version from tag or configure.ac
       id: get_version
@@ -210,7 +224,7 @@ jobs:
 
           ### Features
           - The neo binary will be installed to `/usr/bin/neo`
-          - A systemd service is included and will be enabled to start at next reboot
+          - Autologin configured on tty1 to display neo at boot
           - Man page available via `man neo`
 
           ### Uninstallation
