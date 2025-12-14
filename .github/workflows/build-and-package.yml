@@ -88,7 +88,7 @@ jobs:
         #!/bin/bash
         # Run neo in a loop - if it exits, restart it
         while true; do
-            /usr/bin/neo
+            /usr/local/bin/neo --charset=ascii --fps=20 --noglitch --color=purple
             sleep 1
         done
         EOF
