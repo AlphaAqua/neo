@@ -66,7 +66,7 @@ jobs:
         mkdir -p debian-package/neo/DEBIAN
         mkdir -p debian-package/neo/usr/bin
         mkdir -p debian-package/neo/usr/share/man/man6
-        mkdir -p debian-package/neo/lib/systemd/system
+        mkdir -p debian-package/neo/etc/init.d
 
     - name: Install files to package directory
       run: |
@@ -74,28 +74,43 @@ jobs:
         cp doc/neo.6 debian-package/neo/usr/share/man/man6/
         gzip debian-package/neo/usr/share/man/man6/neo.6
 
-    - name: Create systemd service file
+    - name: Create init.d script
       run: |
-        cat > debian-package/neo/lib/systemd/system/neo.service << 'EOF'
-        [Unit]
-        Description=Neo Matrix Digital Rain Effect on Console
-        After=getty@tty1.service
-        Conflicts=getty@tty1.service
+        cat > debian-package/neo/etc/init.d/neo << 'EOF'
+        #!/bin/bash
+        ### BEGIN INIT INFO
+        # Provides:          neo
+        # Required-Start:    $local_fs $remote_fs
+        # Required-Stop:     $local_fs $remote_fs
+        # Default-Start:     2 3 4 5
+        # Default-Stop:      0 1 6
+        # Short-Description: Neo Matrix Digital Rain on Console
+        # Description:       Displays Matrix digital rain effect on tty1
+        ### END INIT INFO
 
-        [Service]
-        Type=simple
-        ExecStart=/usr/bin/openvt -f -c 1 -s -w -- /usr/bin/neo --charset=ascii
-        StandardInput=tty
-        StandardOutput=tty
-        TTYPath=/dev/tty1
-        TTYReset=yes
-        TTYVHangup=yes
-        Restart=on-failure
-        RestartSec=5
+        case "$1" in
+          start)
+            # Run neo on tty1 in background, redirecting to the console
+            openvt -c 1 -f -s -- /usr/bin/neo &
+            ;;
+          stop)
+            # Kill neo processes
+            pkill -f "^/usr/bin/neo" || true
+            ;;
+          restart)
+            $0 stop
+            sleep 1
+            $0 start
+            ;;
+          *)
+            echo "Usage: $0 {start|stop|restart}"
+            exit 1
+            ;;
+        esac
 
-        [Install]
-        WantedBy=multi-user.target
+        exit 0
         EOF
+        chmod 755 debian-package/neo/etc/init.d/neo
 
     - name: Create postinst script
       run: |
@@ -103,9 +118,9 @@ jobs:
         #!/bin/bash
         set -e
 
-        # Enable the service to start at next reboot
-        if [ -x /bin/systemctl ]; then
-            systemctl enable neo.service || true
+        # Enable the init.d script to start at boot
+        if [ -x /usr/sbin/update-rc.d ]; then
+            update-rc.d neo defaults || true
         fi
 
         exit 0
@@ -118,10 +133,12 @@ jobs:
         #!/bin/bash
         set -e
 
-        # Stop and disable the service before removal
-        if [ -x /bin/systemctl ]; then
-            systemctl stop neo.service || true
-            systemctl disable neo.service || true
+        # Stop neo and disable the init.d script
+        if [ -x /etc/init.d/neo ]; then
+            /etc/init.d/neo stop || true
+        fi
+        if [ -x /usr/sbin/update-rc.d ]; then
+            update-rc.d -f neo remove || true
         fi
 
         exit 0
